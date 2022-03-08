@@ -11,24 +11,31 @@ def generateLogs(operation,entry=""):
         if(entry==""):   
             f.writelines(str(datetime.datetime.now())+";"+".".join(log)+" "+operation+"\n")
         else:
-            f.writelines(str(datetime.datetime.now())+";"+" "+entry+" "+operation+"\n")
+            f.writelines(str(datetime.datetime.now())+";"+entry+" "+operation+"\n")
 
 Threads=[]
 
 #Flow Type
 class Flow:
-    def __init__(self,Name,Type,Execution,Activities):
-        generateLogs("Entry")
+    def __init__(self,Name,Type,Execution,Activities,flowType="Sequential"):
         self.Name=Name
         self.Type=Type 
         self.Execution=Execution
         self.Activities=Activities
+        self.log=log[:]
+        if(flowType=="Concurrent"):
+            generateLogs("Entry",".".join(self.log)+"."+Name)
+        else:
+            generateLogs("Entry")
         if(self.Execution=="Sequential"):
             self.parseActivitiesSequential()
         else:
             self.parseActivitiesConcurrent()
-        generateLogs("Exit")
-        log.pop()
+        if(flowType=="Concurrent"):
+            generateLogs("Exit",".".join(self.log)+"."+Name)
+        else:
+            generateLogs("Exit")
+            log.pop()
     def parseActivitiesSequential(self):
         for act in self.Activities:
             activity=self.Activities[act]
@@ -49,12 +56,11 @@ class Flow:
                     t=threading.Thread(target=Task,args=(act,activity['Type'],activity['Function'],activity['Inputs'],activity['Outputs'],"Concurrent"))
                 else:
                     t=threading.Thread(target=Task,args=(act,activity['Type'],activity['Function'],activity['Inputs'],[],"Concurrent"))
-                t.start()
+                t.start()    
                 Threads.append(t)
             else:
-                log.append(act)
-                sf=Flow(activity,activity["Type"],activity["Execution"],activity["Activities"])
-                
+                t=threading.Thread(target=Flow,args=(act,activity["Type"],activity["Execution"],activity["Activities"],"Concurrent"))
+                Threads.append(t)    
         for t in Threads:
             t.join()
 #Task Type
