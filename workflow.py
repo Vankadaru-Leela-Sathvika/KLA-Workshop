@@ -1,19 +1,19 @@
 # import modules
-from re import A
-from tkinter import W
 import yaml
 from yaml.loader import SafeLoader
-import logging
 import datetime 
-import multiprocessing
+import threading
 from time import sleep
 
 log=[]
-def generateLogs(operation,ct= datetime.datetime.now()):
-    with open("log.txt", 'a') as f:
-        f.writelines(str(ct)+";"+".".join(log)+" "+operation+"\n")
+def generateLogs(operation,name=""):
+    with open("log1B.txt", 'a') as f:
+        if(name==""):   
+            f.writelines(str(datetime.datetime.now())+";"+".".join(log)+" "+operation+"\n")
+        else:
+            f.writelines(str(datetime.datetime.now())+";"+".".join(log)+" "+name+" "+operation+"\n")
 
-
+Threads=[]
 
 #Flow Type
 class Flow:
@@ -41,39 +41,48 @@ class Flow:
             else:
                 sf=Flow(activity,activity["Type"],activity["Execution"],activity["Activities"])
     def parseActivitiesConcurrent(self):
+        Threads=[]
         for act in self.Activities:
             activity=self.Activities[act]
-            log.append(act)
             if(activity['Type']=='Task'):
                 if('Outputs' in activity):
-                    tk=Task(activity,activity['Type'],activity['Function'],activity['Inputs'],activity['Outputs'])
+                    t=threading.Thread(target=Task,args=[activity,activity['Type'],activity['Function'],activity['Inputs'],activity['Outputs'],"Concurrent"],name="t")
                 else:
-                    tk=Task(activity,activity['Type'],activity['Function'],activity['Inputs'])
+                    t=threading.Thread(target=Task,args=[activity,activity['Type'],activity['Function'],activity['Inputs'],[],"Concurrent"],name="t")
+                Threads.append(t)
             else:
                 sf=Flow(activity,activity["Type"],activity["Execution"],activity["Activities"])
-
-
-
-
+        for t in Threads:
+            t.start()
+        for t in Threads:
+            t.join()
 #Task Type
 class Task(Flow):
-    def __init__(self,Name,Type,Function,Inputs,Outputs=[]):
-        generateLogs("Entry")
+    def __init__(self,Name,Type,Function,Inputs,Outputs=[],flowType="Sequential"):
+        
         self.Name=Name
         self.Type=Type
         self.Function=Function
         self.Inputs=Inputs 
         self.Outputs=Outputs
+        if(flowType=="Concurrent"):
+            generateLogs("Entry",self.Name)
+        else:
+            generateLogs("Entry")
         if(Function=="TimeFunction"):
+            self.TimeFunction()
+        if(Function=="DataLoad"):
             self.TimeFunction(Inputs)
-        generateLogs("Exit")
-        log.pop()
+        if(flowType=="Concurrent"):
+            generateLogs("Exit",self.Name)
+        else:
+            generateLogs("Exit")
+            log.pop()
 
     #TimeFunction
-    def TimeFunction(self,Inputs):
-        generateLogs("Executing %s(%s)"%(self.Function,list(self.Inputs.values())[-1]))
-        sleep(int(Inputs['ExecutionTime']))
-        
+    def TimeFunction(self):
+        generateLogs("Executing %s(%s,%s)"%(self.Function,list(self.Inputs.values())[0],list(self.Inputs.values())[-1]))
+        sleep(int(self.Inputs['ExecutionTime']))        
 
     #DataLoad
     def DataLoad(self):
