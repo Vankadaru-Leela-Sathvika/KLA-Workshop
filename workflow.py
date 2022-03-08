@@ -8,16 +8,17 @@ import datetime
 import multiprocessing
 from time import sleep
 
-log=""
+log=[]
 def generateLogs(operation,ct= datetime.datetime.now()):
-    with open("log"+wf.Name+".txt", 'w') as f:
-        f.writelines(ct+";"+".".join(log)+operation)
+    with open("log.txt", 'a') as f:
+        f.writelines(str(ct)+";"+".".join(log)+" "+operation+"\n")
 
 
 
 #Flow Type
 class Flow:
     def __init__(self,Name,Type,Execution,Activities):
+        generateLogs("Entry")
         self.Name=Name
         self.Type=Type 
         self.Execution=Execution
@@ -26,16 +27,30 @@ class Flow:
             self.parseActivitiesSequential()
         else:
             self.parseActivitiesConcurrent()
-    def parseActivities(self):
-        for activity in self.Activities:
-            log.append(activity)
+        generateLogs("Exit")
+        log.pop()
+    def parseActivitiesSequential(self):
+        for act in self.Activities:
+            activity=self.Activities[act]
+            log.append(act)
             if(activity['Type']=='Task'):
-                tk=Task(activity,activity['Type'],activity['Function'],activity['Inputs'],activity['Outputs'])
+                if('Outputs' in activity):
+                    tk=Task(activity,activity['Type'],activity['Function'],activity['Inputs'],activity['Outputs'])
+                else:
+                    tk=Task(activity,activity['Type'],activity['Function'],activity['Inputs'])
             else:
                 sf=Flow(activity,activity["Type"],activity["Execution"],activity["Activities"])
-                self.parseActivities(sf)
     def parseActivitiesConcurrent(self):
-        pass
+        for act in self.Activities:
+            activity=self.Activities[act]
+            log.append(act)
+            if(activity['Type']=='Task'):
+                if('Outputs' in activity):
+                    tk=Task(activity,activity['Type'],activity['Function'],activity['Inputs'],activity['Outputs'])
+                else:
+                    tk=Task(activity,activity['Type'],activity['Function'],activity['Inputs'])
+            else:
+                sf=Flow(activity,activity["Type"],activity["Execution"],activity["Activities"])
 
 
 
@@ -49,18 +64,20 @@ class Task(Flow):
         self.Function=Function
         self.Inputs=Inputs 
         self.Outputs=Outputs
-        generateLogs("Executing %s()")
         if(Function=="TimeFunction"):
-            self.TimeFunction(self,Inputs)
+            self.TimeFunction(Inputs)
         generateLogs("Exit")
+        log.pop()
 
     #TimeFunction
     def TimeFunction(self,Inputs):
+        generateLogs("Executing %s(%s)"%(self.Function,list(self.Inputs.values())[-1]))
         sleep(int(Inputs['ExecutionTime']))
+        
 
     #DataLoad
     def DataLoad(self):
-        pass 
+        generateLogs("Executing %s(%s)"%(self.Function,list(self.Inputs.values())[-1]))
 
     #Binning
     def Binningself(self):
